@@ -1,0 +1,173 @@
+contract VirtualTradexToken =
+
+  record token_initial_info = { 
+    name : string, 
+    symbol : string, 
+    decimals : int }
+
+  record state = { 
+      owner : address, 
+      total_supply : int, 
+      balances : map(address, int), 
+      allowed : map(address, map(address, int)), 
+      token_initial_info : token_initial_info }
+      
+  // EVENTS
+  datatype event =
+    Transfer(indexed address, indexed address, indexed int)
+    | Burn(indexed address, indexed int)
+    | Mint(indexed address, indexed int)
+    | Approval(indexed address, indexed address, indexed int)
+
+  /*
+  * @dev - Initializing function / constructor
+  */
+  entrypoint init() = { 
+      owner = Call.caller,
+      total_supply = 10000000,
+      balances = {},
+      allowed = {},
+      token_initial_info    = { 
+          name = "Virtual TraDEX token", 
+          symbol = "VTT", 
+          decimals = 18 } }
+
+  /*
+  * @dev - Get token inital info
+  */
+  entrypoint get_token_initial_info() : token_initial_info =
+    state.token_initial_info
+  
+  /*
+  * @dev - Get total supply of the token
+  */
+  entrypoint get_total_supply() : int =
+    state.total_supply
+
+  /*
+  * @dev - Get the owner of the contract
+  */
+  entrypoint get_owner() : address =
+    state.owner
+
+  /*
+  * @dev - Check the token balance of the user
+  * @param who : address - The address whose balance will be checked
+  */
+  entrypoint balance_of(who: address) : int = 
+    lookup_by_address(who, state.balances, 0)
+
+  /*
+  * @dev - Transfer tokens from the caller to address
+  * @param to : address - The address to whom tokens will be transfered
+  * @param value : int - The tokens amount which will be transfer
+  */
+  stateful entrypoint transfer(to: address, value: int) : bool =
+    _transfer(Call.caller, to, value)
+
+  /*
+  * @dev - Transfer tokens from the address to another address
+  * @param from : address - The address which will transfer tokens
+  * @param to : address - The address to whom tokens will be transfered
+  * @param value : int - The tokens amount which will be transfer
+  */
+  stateful entrypoint transfer_from(from: address, to: address, value: int) : bool =
+    _transfer(from, to, value)
+
+    true
+
+  stateful function _transfer(from: address, to: address, value: int) : bool =
+    require(value > 0, "Value is sub zero")
+    require(value =< balance_of(from), "Not enough balance")
+      
+    put(state{
+      balances[from] = balance_of(from) - value,
+      balances[to] = balance_of(to) + value})
+
+    Chain.event(Transfer(from, to, value))
+
+    true
+
+  /*
+  * @dev - Mint tokens and increase the total supply
+  * @param account : address - The address which will receive the minted tokens
+  * @param value : int - The token amount which will be minted
+  */
+  stateful entrypoint mint(account: address, value: int) : bool =
+    require(value > 0, "Value is sub zero")
+    
+    put(state{
+      total_supply = state.total_supply + value,
+      balances[account] = balance_of(account) + value})
+
+    Chain.event(Mint(account, value))
+
+    true
+
+  /*
+  * @dev - Burn tokens and decrease the total supply
+  * @param account : address - The address from which will be burned tokens
+  * @param value : int - The token amount which will be burned
+  */
+  stateful entrypoint burn(account: address, value: int) : bool =
+    require(value > 0, "Value is sub zero")
+
+    put(state{ 
+      total_supply = state.total_supply - value,
+      balances[account] = balance_of(account) - value})
+
+    Chain.event(Burn(account, value))
+
+    true
+  
+  /*
+  * @dev - Returns the remaining number of tokens that spender will be allowed to spend on behalf of owner through transfer_from
+  * @param owner : address - The owner who allowed the amount of tokens which the spender can transfer 
+  * @param spender : address - The spender whose allowance will be checked
+  */
+  stateful entrypoint allowance(owner : address, spender : address) : int = 
+    state.allowed[owner][spender]
+
+  /*
+  * @dev - Increases the allowance granted to spender by the caller.
+  * @param spender : address - The address whose allowance will be increased
+  * @param added_value : int - The added value to the given address
+  */
+  stateful entrypoint increase_allowance(spender : address, added_value : int) : bool = 
+    put(state{ 
+      allowed[Call.caller][spender] = allowance(Call.caller, spender) + added_value})
+    
+    approve(Call.caller, spender, allowance(Call.caller, spender))
+
+    true
+
+  /*
+  * @dev - Decreases the allowance granted to spender by the caller
+  * @param spender : address - The address whose allowance will be decreases
+  * @param subtracted_value : int - The substracted value to the given address
+  */
+  stateful entrypoint decrease_allowance(spender : address, subtracted_value : int) : bool = 
+    put(state{ 
+      allowed[Call.caller][spender] = allowance(Call.caller, spender) + subtracted_value})
+    
+    approve(Call.caller, spender, allowance(Call.caller, spender))
+
+    true
+
+  /*
+  * @dev - Sets amount as the allowance of spender over the caller's tokens
+  * @param owner : address - The address which wil give tokens amount to spend 
+  * @param spender : address - The address which will get tokens amount to spend
+  * @param value : int - The amount of tokens which will be allowed to be spent
+  */
+  stateful entrypoint approve(owner : address, spender : address, value : int) : bool = 
+    put(state{ allowed[owner][spender] = value})
+    
+    Chain.event(Approval(owner, spender, value))
+
+    true
+
+  function lookup_by_address(k : address, m, v) =
+  	switch(Map.lookup(k, m))
+	    None    => v
+	    Some(x) => x
