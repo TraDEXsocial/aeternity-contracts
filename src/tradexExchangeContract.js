@@ -1,65 +1,97 @@
-const fs = require('fs');
-const { Universal } = require('@aeternity/aepp-sdk');
-const config = require('./environment.js');
-const path = require('path');
+const fs = require('fs')
+const { Universal } = require('@aeternity/aepp-sdk')
+const config = require('./environment.js')
+const path = require('path')
 
+const host = "http://localhost:3001"
+const internalHost = "http://localhost:3001/internal"
+const compilerUrl = 'http://localhost:3080'
+const networkId = 'ae_devnet'
+
+let keypair = {
+    secretKey: "bb9f0b01c8c9553cfbaf7ef81a50f977b1326801ebf7294d1c2cbccdedf27476e9bbf604e611b5460a3b3999e9771b6f60417d73ce7c5519e12f7e127a1225ca",
+    publicKey: "ak_2mwRmUeYmfuW93ti9HMSUJzCk1EYcQEfikVSzgo6k2VghsWhgU"
+}
 
 class ContractInstance {
     constructor() {
-        // read contract file in order to remotely compile it and create the instance later
-        this.tradexExchangeContractSource = fs.readFileSync(path.join(__dirname, '..', 'contracts') + `\\${config.CONTRACT_SETTINGS.SOURCE}`,  'utf-8');
+        this.tradexExchangeContractSource = fs.readFileSync(path.join(__dirname, '..', 'contracts') + `\\${config.CONTRACT_SETTINGS.SOURCE}`,  'utf-8')
     }
 
     // initialize aeternity and contract instance
     async init() {
         this.client = await Universal({
-            url: config.UNIVERSAL_SETTINGS.URL,
-            internalUrl: config.UNIVERSAL_SETTINGS.INTERNAL_URL,
+            url: host,
+            internalUrl: internalHost,
             keypair: {
-                publicKey: config.UNIVERSAL_SETTINGS.KEYPAIR.PUBLIC_KEY,
-                secretKey: config.UNIVERSAL_SETTINGS.KEYPAIR.SECRET_KEY
+                publicKey: keypair.publicKey,
+                secretKey: keypair.secretKey
             },
-            compilerUrl: config.UNIVERSAL_SETTINGS.COMPILER_URL
-        });
+            nativeMode: false,
+            networkId: networkId,
+            compilerUrl: compilerUrl
+        })
 
         this.contractInstance = await this.client.getContractInstance(this.tradexExchangeContractSource, 
-            {contractAddress: config.CONTRACT_SETTINGS.ADDRESS, callStatic: true});
+            { contractAddress: config.CONTRACT_SETTINGS.ADDRESS, callStatic: true })
     }
 
     // CONTRACT METHODS
     async getBalance(address) {
-        const balance = await this.contractInstance.methods.balance_of(address);
+        await this.init()
+        
+        const balance = await this.contractInstance.methods.balance_of(address)
     
-        return balance.decodedResult;
+        return balance.decodedResult
     }
 
     async getBalanceOfAe(address) {
-        const balanceOfAe = await this.contractInstance.methods.get_balance(address);
+        await this.init()
+
+        const balanceOfAe = await this.contractInstance.methods.get_balance(address)
     
-        return balanceOfAe.decodedResult;
+        return balanceOfAe.decodedResult
     }
 
     async getExchangeRateForAe() {
-        const exchangeRateForAe = await this.contractInstance.methods.get_exchange_rate_for_ae();
+        await this.init()
+
+        const exchangeRateForAe = await this.contractInstance.methods.get_exchange_rate_for_ae()
     
-        return exchangeRateForAe.decodedResult;
+        return exchangeRateForAe.decodedResult
     };
 
     async getExchangeRateForToken(addressOfToken) {
-        const exchangeRateForToken = await this.contractInstance.methods.get_exchange_rate_for_token(addressOfToken);
+        await this.init()
+
+        const exchangeRateForToken = await this.contractInstance.methods.get_exchange_rate_for_token(addressOfToken)
     
-        return exchangeRateForToken.decodedResult;
+        return exchangeRateForToken.decodedResult
     };
 
-    async getLiquidity(publicKey, privateKey) {
-        let client = await this.createClient(publicKey, privateKey);
+    async addLiquidity(amount) {
+        await this.init()
 
-        let contractInstance = await this.createContactInstance(client);
-
-        const liquidity = await contractInstance.methods.get_liquidity();
-    
-        return liquidity.decodedResult;
+        await this.contractInstance.methods.add_liquidity({ amount: amount })
     };
+
+    async getLiquidity() {
+        await this.init()
+
+        await this.contractInstance.methods.get_liquidity()
+    }
+
+    async swapForAe(tokensInAmount, poolWalletAddress, tokenInAddress) {
+        await this.init()
+
+        await this.contractInstance.methods.swap_for_ae(tokensInAmount, poolWalletAddress, tokenInAddress)
+    }
+
+    async swapForTokens(tokensInAmount, poolWallet, tokenInAddress, tokenOutAddress) {
+        await this.init()
+
+        await this.contractInstance.methods.swap_for_tokens(tokensInAmount, poolWallet, tokenInAddress, tokenOutAddress)
+    }
 }
 
-module.exports = ContractInstance;
+module.exports = ContractInstance

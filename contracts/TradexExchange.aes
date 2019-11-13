@@ -86,7 +86,7 @@ contract TradexExchange =
   /*
   * @dev - Function to add AE tokens from the pool wallet (the address which calls the function) to the contract to provide liquidity
   */  
-  stateful entrypoint add_liquidity() = 
+  payable stateful entrypoint add_liquidity() = 
     let liquidity_provider : address = Call.caller
 
     let amount = Call.value
