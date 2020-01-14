@@ -4,19 +4,14 @@
   "description": "This is the default package.json generated for your project",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha ./test/**/*.js --timeout 0 --exit",
+    "aetest": "aeproject test"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-	"@aeternity/aepp-sdk": "6.0.2",
-    "aeproject-lib": "1.0.2",
-    "axios": "^0.19.0",
-    "big-number": "^2.0.0",
-    "forgae-lib": "2.0.0",
-    "yarn": "1.17.3",
-    "express": "^4.17.1",
-    "express-generator": "^4.16.1",
-    "dotenv": "^8.1.0"
+    "@aeternity/aepp-sdk": "6.0.0",
+    "aeproject-lib": "2.0.1",
+    "yarn": "1.21.0"
   }
 }

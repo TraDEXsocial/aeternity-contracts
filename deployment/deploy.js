@@ -21,7 +21,6 @@ const deploy = async (network, privateKey, compiler, networkId) => {
 
     await deployer.deploy("./contracts/TradexExchange.aes", [20])
     await deployer.deploy("./contracts/VirtualTradexToken.aes")
-
 };
 
 module.exports = {
